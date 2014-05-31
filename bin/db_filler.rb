@@ -48,6 +48,7 @@ symbol_list.each do |symbol|
     puts e.message
     puts e.backtrace.inspect
     save_symbol_to_file(symbol, PARSE_ERROR_FILE)
+    next
   rescue
     puts "Get list or parse fail...#{tries}th try".red
     if tries < 10
