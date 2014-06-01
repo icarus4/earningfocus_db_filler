@@ -115,12 +115,13 @@ symbol_list.each do |symbol|
     st = Statement.new if st.nil?
 
     # basic info
-    st.symbol                 ||= symbol
-    st.stock_id               ||= stock.id
-    st.document_type          ||= pst[:document_type]
-    st.year                   ||= pst[:year]
-    st.quarter                ||= pst[:fiscal_period] =~ /^Q[1-4]{1}$/ ? pst[:fiscal_period][1] : nil
-    st.fiscal_period_end_date ||= Date.parse(pst[:fiscal_period_end_date])
+    st.symbol                 = symbol
+    st.stock_id               = stock.id
+    st.document_type          = pst[:document_type]
+    st.year                   = pst[:year]
+    st.quarter                = pst[:fiscal_period] =~ /^Q[1-4]{1}$/ ? pst[:fiscal_period][1] : nil
+    st.fiscal_period_end_date = Date.parse(pst[:fiscal_period_end_date])
+    st.statement_link         = pst[:statement_link]
 
     case pst[:document_type]
     when '10-K'
@@ -134,15 +135,15 @@ symbol_list.each do |symbol|
     # ap pst[period_duration_sym] # debug
 
     # data
-    st.revenue                    ||= pst[period_duration_sym][:revenue]
-    st.gross_profit               ||= pst[period_duration_sym][:gross_profit]
-    st.operating_income           ||= pst[period_duration_sym][:operating_income]
-    st.net_income_before_tax      ||= pst[period_duration_sym][:net_income_before_tax]
-    st.net_income_after_tax       ||= pst[period_duration_sym][:net_income_after_tax]
-    st.cost_of_revenue            ||= pst[period_duration_sym][:cost_of_revenue]
-    st.total_operating_expense    ||= pst[period_duration_sym][:total_operating_expense]
-    st.eps_basic                  ||= pst[period_duration_sym][:eps_basic]
-    st.eps_diluted                ||= pst[period_duration_sym][:eps_diluted]
+    st.revenue                    = pst[period_duration_sym][:revenue]
+    st.gross_profit               = pst[period_duration_sym][:gross_profit]
+    st.operating_income           = pst[period_duration_sym][:operating_income]
+    st.net_income_before_tax      = pst[period_duration_sym][:net_income_before_tax]
+    st.net_income_after_tax       = pst[period_duration_sym][:net_income_after_tax]
+    st.cost_of_revenue            = pst[period_duration_sym][:cost_of_revenue]
+    st.total_operating_expense    = pst[period_duration_sym][:total_operating_expense]
+    st.eps_basic                  = pst[period_duration_sym][:eps_basic]
+    st.eps_diluted                = pst[period_duration_sym][:eps_diluted]
 
     # calculate nil columns
     st.gross_profit = st.revenue - st.cost_of_revenue if st.gross_profit.nil? and !st.revenue.nil? and !st.cost_of_revenue.nil?
