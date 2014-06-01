@@ -124,12 +124,14 @@ symbol_list.each do |symbol|
     st.statement_link         = pst[:statement_link]
 
     case pst[:document_type]
-    when '10-K'
+    when '10-K', '10-K/A'
       st.fiscal_period_duration_in_month = 12
       period_duration_sym = :last_12month_data
-    when '10-Q'
+    when '10-Q', '10-Q/A'
       st.fiscal_period_duration_in_month = 3
       period_duration_sym = :last_3month_data
+    else
+      raise "wrong document_type"
     end
 
     # ap pst[period_duration_sym] # debug
