@@ -23,12 +23,18 @@ class Statement < ActiveRecord::Base
   validates :symbol, presence: true, length: { within: 1..6 }
 
   # fiscal_period_end_date
-  validates :symbol, presence: true
+  validates :fiscal_period_end_date, presence: true
 
   # fiscal_period_duration_in_month
   validates :fiscal_period_duration_in_month, presence: true, numericality: { greater_than_or_equal_to: 0 }
 
   # avoid duplicated report
-  validates_uniqueness_of :quarter, :fiscal_period_end_date, scope: [:stock_id, :year]
+  validates_uniqueness_of :fiscal_period_end_date, scope: [:stock_id, :year]
+
+  # statement_link
+  validates :statement_link, allow_nil: true, length: { maximum: 255 }
+
+  # document_type
+  validates :document_type, presence: true, inclusion: { in: ['10-Q', '10-K', '10-Q/A', '10-K/A'] }
 
 end
