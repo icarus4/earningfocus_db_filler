@@ -13,8 +13,9 @@ PARSE_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/parse_error.txt"
 LINK_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/link_error.txt"
 SAVE_TO_DATABASE_FAIL_FILE = "#{PROJECT_ROOT_DIR}/tmp/save_to_database_error.txt"
 UNKNOWN_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/unknown_error.txt"
+LAST_PARSED_SYMBOL_FILE = "#{PROJECT_ROOT_DIR}/tmp/last_parsed_symbol.txt"
 
-def save_symbol_to_file(symbol, path)
+def push_symbol_to_file(symbol, path)
   begin
     array = IO.readlines(path).map(&:chomp)
   rescue
@@ -40,19 +41,33 @@ def remove_symbol_from_file(symbol, path)
 end
 
 
+# Initialization
+$interrupted = false
+trap("SIGINT") { $interrupted = true }
+begin
+  File.open(LAST_PARSED_SYMBOL_FILE,'r') do |f|
+    $last_parsed_symbol = f.readline.chomp
+  end
+rescue
+  $last_parsed_symbol = 'A'
+end
+
 symbol_list = []
 File.open(SYMBOL_LIST, 'r') do |f|
   f.each_line do |line|
     symbol_list << line.split('|')[0]
   end
+  symbol_list.sort!
 end
 
 # symbol_list = %w(aapl)
 
 symbol_list.each do |symbol|
 
-  symbol.upcase!
+  break if $interrupted
+  next if symbol < $last_parsed_symbol
 
+  symbol.upcase!
   parser = SecStatementParser::Statement.new(symbol)
 
   # get list
@@ -64,7 +79,7 @@ symbol_list.each do |symbol|
       tries += 1
       retry
     else
-      save_symbol_to_file(symbol, LINK_ERROR_FILE)
+      push_symbol_to_file(symbol, LINK_ERROR_FILE)
       next
     end
   end
@@ -77,14 +92,14 @@ symbol_list.each do |symbol|
   rescue ParseError => e
     puts e.message
     puts e.backtrace.inspect
-    save_symbol_to_file(symbol, PARSE_ERROR_FILE)
+    push_symbol_to_file(symbol, PARSE_ERROR_FILE)
     next
   rescue
     if tries < 10
       tries += 1
       retry
     else
-      save_symbol_to_file(symbol, UNKNOWN_ERROR_FILE)
+      push_symbol_to_file(symbol, UNKNOWN_ERROR_FILE)
       next
     end
   end
@@ -159,13 +174,17 @@ symbol_list.each do |symbol|
     begin
       st.save!
       puts "ok".green
+      if symbol > $last_parsed_symbol
+        $last_parsed_symbol = symbol
+        File.open(LAST_PARSED_SYMBOL_FILE, 'w') { |f| f.write($last_parsed_symbol) }
+      end
     rescue
       puts "failed".red
       puts st.errors
       puts st.errors.messages
       ap pst
       ap st
-      save_symbol_to_file(symbol, SAVE_TO_DATABASE_FAIL_FILE)
+      push_symbol_to_file(symbol, SAVE_TO_DATABASE_FAIL_FILE)
     end
   end
 end
