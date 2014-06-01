@@ -10,11 +10,13 @@ require "awesome_print"
 SYMBOL_LIST = "#{Dir.home}/.sec_statement_parser/data/nasdaq_traded_stock_list.txt"
 PROJECT_ROOT_DIR = File.expand_path('../../', __FILE__)
 PARSE_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/parse_error.txt"
+LINK_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/link_error.txt"
+SAVE_TO_DATABASE_FAIL_FILE = "#{PROJECT_ROOT_DIR}/tmp/save_to_database_error.txt"
 UNKNOWN_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/unknown_error.txt"
 
 def save_symbol_to_file(symbol, path)
   begin
-    array = IO.readlines(path)
+    array = IO.readlines(path).map(&:chomp)
   rescue
     array = []
   end
@@ -25,14 +27,27 @@ def save_symbol_to_file(symbol, path)
   end
 end
 
-symbol_list = []
-# File.open(SYMBOL_LIST, 'r') do |f|
-#   f.each_line do |line|
-#     symbol_list << line.split('|')[0]
-#   end
-# end
+def remove_symbol_from_file(symbol, path)
+  begin
+    array = IO.readlines(path).map(&:chomp)
+  rescue
+    array = []
+  end
+  array.delete(symbol) if array.include?(symbol)
+  File.open(path, 'w') do |f|
+    f.puts(array)
+  end
+end
 
-symbol_list = %w(scty amzn fslr aapl f hd nke v)
+
+symbol_list = []
+File.open(SYMBOL_LIST, 'r') do |f|
+  f.each_line do |line|
+    symbol_list << line.split('|')[0]
+  end
+end
+
+# symbol_list = %w(aapl)
 
 symbol_list.each do |symbol|
 
@@ -40,9 +55,24 @@ symbol_list.each do |symbol|
 
   parser = SecStatementParser::Statement.new(symbol)
 
+  # get list
   tries = 1
   begin
     parser.get_list
+  rescue
+    if tries < 10
+      tries += 1
+      retry
+    else
+      save_symbol_to_file(symbol, LINK_ERROR_FILE)
+      next
+    end
+  end
+  remove_symbol_from_file(symbol, LINK_ERROR_FILE)
+
+  # parse
+  tries = 1
+  begin
     parser.parse_url_list
   rescue ParseError => e
     puts e.message
@@ -50,12 +80,11 @@ symbol_list.each do |symbol|
     save_symbol_to_file(symbol, PARSE_ERROR_FILE)
     next
   rescue
-    puts "Get list or parse fail...#{tries}th try".red
     if tries < 10
       tries += 1
       retry
     else
-      save_symbol_to_file("#{symbol}|#{e.message}", UNKNOWN_ERROR_FILE)
+      save_symbol_to_file(symbol, UNKNOWN_ERROR_FILE)
       next
     end
   end
@@ -122,7 +151,7 @@ symbol_list.each do |symbol|
     st.operating_income = st.revenue - st.total_operating_expense if st.operating_income.nil? and !st.revenue.nil? and !st.total_operating_expense.nil?
     st.total_operating_expense = st.revenue - st.operating_income if st.total_operating_expense.nil? and !st.revenue.nil? and !st.operating_income.nil?
 
-    print "Saving to database..."
+    print "Saving #{st.statement_link.split('/').last} to database..."
 
     begin
       st.save!
@@ -130,6 +159,10 @@ symbol_list.each do |symbol|
     rescue
       puts "failed".red
       puts st.errors
+      puts st.errors.messages
+      ap pst
+      ap st
+      save_symbol_to_file(symbol, SAVE_TO_DATABASE_FAIL_FILE)
     end
   end
 end
