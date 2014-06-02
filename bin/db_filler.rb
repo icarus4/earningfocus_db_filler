@@ -14,6 +14,7 @@ LINK_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/link_error.txt"
 SAVE_TO_DATABASE_FAIL_FILE = "#{PROJECT_ROOT_DIR}/tmp/save_to_database_error.txt"
 UNKNOWN_ERROR_FILE = "#{PROJECT_ROOT_DIR}/tmp/unknown_error.txt"
 LAST_PARSED_SYMBOL_FILE = "#{PROJECT_ROOT_DIR}/tmp/last_parsed_symbol.txt"
+CIK_CONFLICT_FILE = "#{PROJECT_ROOT_DIR}/tmp/cik_conflict.txt"
 
 def push_symbol_to_file(symbol, path)
   begin
@@ -119,7 +120,13 @@ symbol_list.each do |symbol|
       stock.company_name = pst[:registrant_name]
       stock.cik          = pst[:cik]
 
-      stock.save
+      begin
+        stock.save!
+      rescue
+        puts "cik(#{stock.cik}) conflict?".red
+        push_symbol_to_file(symbol, CIK_CONFLICT_FILE)
+        next
+      end
     end
 
     st = Statement.find_by(symbol:                  symbol,
