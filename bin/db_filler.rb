@@ -56,17 +56,19 @@ end
 symbol_list = []
 File.open(SYMBOL_LIST, 'r') do |f|
   f.each_line do |line|
-    symbol_list << line.split('|')[0]
+    symbol_list << line.split('|')[0] if !line.include?('%') and !line.split('|')[0].include?('.')
   end
   symbol_list.sort!
 end
 
 # symbol_list = %w(aapl)
 
-symbol_list.each do |symbol|
+symbol_list.each_with_index do |symbol, i|
 
   break if $interrupted
   next if symbol < $last_parsed_symbol
+
+  puts "Processing #{i}th stock: #{symbol}"
 
   symbol.upcase!
   parser = SecStatementParser::Statement.new(symbol)
@@ -80,11 +82,14 @@ symbol_list.each do |symbol|
       tries += 1
       retry
     else
+      puts "Get list failed".red
       push_symbol_to_file(symbol, LINK_ERROR_FILE)
       next
     end
+  else
+    remove_symbol_from_file(symbol, LINK_ERROR_FILE)
   end
-  remove_symbol_from_file(symbol, LINK_ERROR_FILE)
+
 
   # parse
   tries = 1
