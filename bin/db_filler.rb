@@ -180,11 +180,6 @@ symbol_list.each do |symbol|
 
     begin
       st.save!
-      puts "ok".green
-      if symbol > $last_parsed_symbol
-        $last_parsed_symbol = symbol
-        File.open(LAST_PARSED_SYMBOL_FILE, 'w') { |f| f.write($last_parsed_symbol) }
-      end
     rescue
       puts "failed".red
       puts st.errors
@@ -192,6 +187,12 @@ symbol_list.each do |symbol|
       ap pst
       ap st
       push_symbol_to_file(symbol, SAVE_TO_DATABASE_FAIL_FILE)
+    else
+      puts "ok".green
+      if symbol > $last_parsed_symbol
+        $last_parsed_symbol = symbol
+        File.open(LAST_PARSED_SYMBOL_FILE, 'w') { |f| f.write($last_parsed_symbol) }
+      end
     end
   end
 end
